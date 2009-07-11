@@ -1,4 +1,5 @@
 <?php
+ini_set('memory_limit', '1342177280'); //128M
 require_once 'Flickr/API.php';
 
 if(isset($_POST['userid'])) 
@@ -21,27 +22,39 @@ function display($userid) {
 		$code = $api->getErrorCode();
 		$message = $api->getErrorMessage();
 		print_r("<pre>\n$code : $message\n </pre>");
+	} else {
+		$user = new SimpleXMLElement($response->get());
 	}
 
-	$user = new SimpleXMLElement($response->get());
 	$userNSID = $user->user['nsid'];
 
 	$response = $api->callMethod('flickr.people.getPublicPhotos', array(
-				'user_id' => $userNSID	
+				'user_id' => $userNSID,
+				'per_page' => "10"
 				));
 	if (!$response){
 		// fetch the error
 		$code = $api->getErrorCode();
 		$message = $api->getErrorMessage();
 		print_r("<pre>\n$code : $message\n </pre>");
+	} else {
+		$userPhotosXML = new SimpleXMLElement($response->get());
 	}
-	$userPhotosXML = new SimpleXMLElement($response->get());
 
 	$userPhotos = array();
 
-	foreach($userPhotosXML->photos->photo as $photo) 
-		$userPhotos[] = $photo["id"];
-
+	foreach($userPhotosXML->photos->photo as $photo) {
+		$response = $api->callMethod('flickr.photos.getExif', array(
+					'photo_id' => $photo["id"]
+					));
+		if (!$response){
+			// fetch the error
+			$code = $api->getErrorCode();
+			$message = $api->getErrorMessage();
+			print_r("<pre>\n$code : $message\n </pre>");
+		}
+		$userPhotos[] = new SimpleXMLElement($response->get());
+	}
 
 
 	print "<pre>"; 	print_r($userPhotos); print "</pre>";
